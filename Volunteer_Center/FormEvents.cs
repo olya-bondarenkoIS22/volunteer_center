@@ -98,19 +98,34 @@ namespace Volunteer_Center
 
         private void SetupUIBasedOnRole()
         {
-            if (IsGuest || currentUserRole == "Координатор")
+            // Hide panel for guests and volunteers (they don't need the right panel)
+            if (IsGuest || currentUserRole == "Волонтер")
             {
-                buttonCreate.Visible = false;
-                buttonUpdate.Visible = false;
-                buttonDelete.Visible = false;
                 panel.Visible = false;
                 dataGridViewEvent.Dock = DockStyle.Fill;
             }
-            else if (currentUserRole == "Администратор")
+            else
             {
-                buttonCreate.Visible = true;
-                buttonUpdate.Visible = true;
-                buttonDelete.Visible = true;
+                panel.Visible = true;
+
+                // For Coordinator and Administrator, show the registration button
+                buttonVolunteerRegistration.Visible = true;
+
+                if (currentUserRole == "Координатор")
+                {
+                    // Coordinator can create, update, and register volunteers
+                    buttonCreate.Visible = true;
+                    buttonUpdate.Visible = true;
+                    buttonDelete.Visible = false; // Coordinator cannot delete
+                }
+                else if (currentUserRole == "Администратор")
+                {
+                    // Administrator can do everything
+                    buttonCreate.Visible = true;
+                    buttonUpdate.Visible = true;
+                    buttonDelete.Visible = true;
+                    buttonVolunteerRegistration.Visible = true;
+                }
             }
         }
 
@@ -120,6 +135,7 @@ namespace Volunteer_Center
             buttonCreate.Click += ButtonCreate_Click;
             buttonUpdate.Click += ButtonUpdate_Click;
             buttonDelete.Click += ButtonDelete_Click;
+            buttonVolunteerRegistration.Click += buttonVolunteerRegistration_Click;
         }
 
         private void LoadEvents()
@@ -237,30 +253,32 @@ namespace Volunteer_Center
             {
                 using (var db = new VolunteerCenterContext())
                 {
+                    // Get current volunteer's completed events
                     int completedEventsCount = db.VolunteerRegistrations
                         .Include(r => r.IdEventNavigation)
                             .ThenInclude(e => e.IdStatusNavigation)
                         .Include(r => r.IdRegistrationStatusNavigation)
-                        .Count(r => r.IdRegistrationStatusNavigation.RegistrationStatusName == "Подтверждено" &&
+                        .Count(r => r.IdUser == CurrentUser.Id &&
+                                   r.IdRegistrationStatusNavigation.RegistrationStatusName == "Подтверждено" &&
                                    r.IdEventNavigation.IdStatusNavigation.StatusName == "Завершено");
 
-                    // Add or update volunteer stats label
+                    // Create or update stats label on the main form
                     Label volunteerStatsLabel = null;
-                    if (!panel.Controls.ContainsKey("volunteerStatsLabel"))
+                    if (!this.Controls.ContainsKey("volunteerStatsLabel"))
                     {
                         volunteerStatsLabel = new Label();
                         volunteerStatsLabel.Name = "volunteerStatsLabel";
                         volunteerStatsLabel.Dock = DockStyle.Bottom;
-                        volunteerStatsLabel.Height = 60;
+                        volunteerStatsLabel.Height = 50;
                         volunteerStatsLabel.TextAlign = ContentAlignment.MiddleCenter;
                         volunteerStatsLabel.BackColor = Color.LightBlue;
                         volunteerStatsLabel.Font = new Font("Times New Roman", 12, FontStyle.Bold);
-                        panel.Controls.Add(volunteerStatsLabel);
+                        this.Controls.Add(volunteerStatsLabel);
                         volunteerStatsLabel.BringToFront();
                     }
                     else
                     {
-                        volunteerStatsLabel = panel.Controls["volunteerStatsLabel"] as Label;
+                        volunteerStatsLabel = this.Controls["volunteerStatsLabel"] as Label;
                     }
 
                     if (volunteerStatsLabel != null)
